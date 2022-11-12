@@ -9,11 +9,18 @@
     <title>Example JSUI</title>
 </head>
     <body>
-        <div @jsui:var="test"></div>
+        <div @jsui:eval:block>
+            if (@test.startsWith('test')) {
+                return '<h1 @jsui:eval>@test</h1>';
+            }
+            return 'Not a test value';
+        </div>
         <div>
             <table>
-                <tr @jsui:for="line : arrLines">
-                    <td @jsui:for="content : line" @jsui:var="content"></td>
+                <tr @jsui:for="line : @arrLines">
+                    <td @jsui:for="content : @line" @jsui:eval>
+                        @content == 1 ? @content + ' test' : @content
+                    </td>
                 </tr>
             </table>
         </div>        

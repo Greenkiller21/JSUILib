@@ -1,10 +1,7 @@
 document.addEventListener('DOMContentLoaded', main, false);
 
 function main() {
-    console.log(jsui_variables);
-    var varManager = new JSUIVarManager(jsui_variables);
-
-    parseHtml(document.body, varManager);
+    parseHtml(document.body);
 
     // var variables = document.getElementsByTagName("jsui:var");
     // for (const variable of variables) {
@@ -14,86 +11,85 @@ function main() {
 }
 
 /**
- * 
- * @param {Element} node 
- * @param {JSUIVarManager} varManager
+ * Transforms the html where there are @jsui attributes
+ * @param {Element} node The node to parse
  */
-function parseHtml(node, varManager) {
+function parseHtml(node) {
     var varName = null;
     if ((varName = node.getAttribute("@jsui:for")) !== null) {
         var split = varName.split(':');
         var loopVar = split[0].trim(); 
-        var globalVar = split[1].trim();
+        var globalVar = evaluateString('return ' + split[1].trim());
 
         if (split.length != 2) {
             throw new Error(`Expected <loop_var>:<var> format but got '${varName}' !`);
         }
 
-        varManager.createVar(loopVar);
+        JSUIVarManager.createVar(loopVar);
         var newNode;
-        for (const item of varManager.getVar(globalVar)) {
-            varManager.setVar(loopVar, item);
+        for (const item of globalVar) {
+            JSUIVarManager.setVar(loopVar, item);
             newNode = node.cloneNode(true);
             newNode.removeAttribute("@jsui:for");
 
-            parseHtml(newNode, varManager);
+            parseHtml(newNode);
 
             node.parentNode.appendChild(newNode);
         }
-        varManager.delVar(loopVar);
+        JSUIVarManager.delVar(loopVar);
         node.remove();
         return;
     } 
     
-    if ((varName = node.getAttribute("@jsui:var")) !== null) {
-        node.removeAttribute("@jsui:var");
-        node.innerHTML = varManager.getVar(varName);
-    } 
+    if (node.getAttribute("@jsui:eval") !== null || node.getAttribute("@jsui:eval:line") !== null) {
+        node.removeAttribute("@jsui:eval:line");
+        node.removeAttribute("@jsui:eval");
+        node.innerHTML = evaluateString('return ' + node.innerHTML.trim());
+    } else if (node.getAttribute("@jsui:eval:block") !== null) {
+        node.removeAttribute("@jsui:eval:block");
+        node.innerHTML = evaluateString(node.innerHTML.trim());
+    }
 
     for (const child of node.children) {
-        parseHtml(child, varManager);
+        parseHtml(child);
     }
 }
 
 /**
- * 
- * @param {string} toEval 
+ * Evaluates the expression toEval and returns the result
+ * The variables inside the string starting with @ will be
+ * interpreted as variables from JSUIVarManager
+ * @param {string} toEval The string to evaluate
+ * @returns The result of the evaluated string
  */
-function evaluate(toEval) {
+function evaluateString(toEval) {
     var reg = new RegExp(/@[a-zA-Z_][0-9a-zA-Z_]*/g);
     for (const match of Array.from(toEval.matchAll(reg)).reverse()) {
-        var toAdd = "varManager.getObject()['" + match[0] + "']";
+        if (match[0].startsWith("@jsui")) {
+            continue;
+        }
+        var toAdd = "JSUIVarManager.getObject()[\"" + match[0].substring(1) + "\"]";
 
         toEval = toEval.slice(0, match.index) + toAdd + toEval.slice(match.index + match[0].length);
     }
-    return toEval;
+    
+    console.log(toEval.trim());
+    return new Function(toEval.trim())();
 }
 
 class JSUIVarManager {
-    #jsui_vars = new Object();
-
-    /**
-     * The constructor of JSUIVarManager
-     * @param {any | null} jsuiVars The variables
-     * @returns {JSUIVarManager} Variables manager
-     */
-    constructor(jsuiVars) {
-        if (jsuiVars === null || jsuiVars === undefined) {
-            return;
-        }
-        this.#jsui_vars = jsuiVars;
-    }
+    static #jsui_vars = new Object();
 
     /**
      * Sets the value of an existing variable
      * @param {string} name 
      * @param {any} value 
      */
-    setVar(name, value) {
-        if (!this.exists(name)) {
+    static setVar(name, value) {
+        if (!JSUIVarManager.exists(name)) {
             throw new Error(`Could not find the variable '${name}' !`);
         }
-        Reflect.set(this.#jsui_vars, name, value);
+        Reflect.set(JSUIVarManager.#jsui_vars, name, value);
     }
 
     /**
@@ -101,57 +97,57 @@ class JSUIVarManager {
      * @param {string} name The name of the variable
      * @returns {any} The value of the variable
      */
-    getVar(name) {
-        if (!this.exists(name)) {
+    static getVar(name) {
+        if (!JSUIVarManager.exists(name)) {
             throw new Error(`Could not find the variable '${name}' !`);
         }
-        return Reflect.get(this.#jsui_vars, name);
+        return Reflect.get(JSUIVarManager.#jsui_vars, name);
     }
 
     /**
      * Create a new variable
      * @param {string} name The name of the variable
      */
-    createVar(name) {
-        if (this.exists(name)) {
+    static createVar(name) {
+        if (JSUIVarManager.exists(name)) {
             throw new Error(`The variable '${name}' already exists !`);
         }
-        Reflect.set(this.#jsui_vars, name);
+        Reflect.set(JSUIVarManager.#jsui_vars, name);
     }
 
     /**
      * Deletes the specified variable
      * @param {string} name The name of the variable
      */
-    delVar(name) {
-        if (!this.exists(name)) {
+    static delVar(name) {
+        if (!JSUIVarManager.exists(name)) {
             throw new Error(`Could not find the variable '${name}' !`);
         }
-        Reflect.deleteProperty(this.#jsui_vars, name);
+        Reflect.deleteProperty(JSUIVarManager.#jsui_vars, name);
     }
 
     /**
      * Lists the names of all the variables
      * @returns {string[]} The variables names
      */
-    listVarNames() {
-        return Reflect.ownKeys(this.#jsui_vars);
+    static listVarNames() {
+        return Reflect.ownKeys(JSUIVarManager.#jsui_vars);
     }
 
     /**
      * Checks if a varaible exists
-     * @param {*} name The name of the variable
+     * @param {string} name The name of the variable
      * @returns {boolean} Whether the variable exists
      */
-    exists(name) {
-        return Reflect.has(this.#jsui_vars, name);
+    static exists(name) {
+        return Reflect.has(JSUIVarManager.#jsui_vars, name);
     }
 
     /**
      * Returns the object used to store all the variables
      * @returns {Object} The object
      */
-    getObject() {
-        return this.#jsui_vars;
+    static getObject() {
+        return JSUIVarManager.#jsui_vars;
     }
 }

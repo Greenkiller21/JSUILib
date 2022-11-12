@@ -3,9 +3,9 @@ var arrLines = [
     ["testing", "2"],
     ["ex", "3"]
 ];
-var test = "test var str";
+var test = "test title";
 
-var jsui_variables = {
-    arrLines: arrLines, 
-    test: test
-};
+JSUIVarManager.createVar("test");
+JSUIVarManager.createVar("arrLines");
+JSUIVarManager.setVar("test", test);
+JSUIVarManager.setVar("arrLines", arrLines);
