@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="./jsui.js"></script>
+    <script src="./example.js"></script>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Example JSUI</title>
+</head>
+    <body>
+        <div @jsui:var="test"></div>
+        <div>
+            <table>
+                <tr @jsui:for="line : arrLines">
+                    <td @jsui:for="content : line" @jsui:var="content"></td>
+                </tr>
+            </table>
+        </div>        
+    </body>
+</html>
