@@ -1,13 +1,21 @@
 document.addEventListener('DOMContentLoaded', main, false);
 
 function main() {
-    parseHtml(document.body);
+    initShards();
+    //parseHtml(document.body);
 
     // var variables = document.getElementsByTagName("jsui:var");
     // for (const variable of variables) {
     //     console.log(variable);
     //     var jsuiVar = new JSUIVarParser(variable);
     // }
+}
+
+function initShards() {
+    var shards = document.getElementsByTagName("jsui:shard");
+    for (const shard of shards) {
+        JSUIShardManager.initShard(shard);
+    }
 }
 
 /**
@@ -68,13 +76,57 @@ function evaluateString(toEval) {
         if (match[0].startsWith("@jsui")) {
             continue;
         }
-        var toAdd = "JSUIVarManager.getObject()[\"" + match[0].substring(1) + "\"]";
+        var toAdd = "JSUIVarManager.getObject()." + match[0].substring(1);
 
         toEval = toEval.slice(0, match.index) + toAdd + toEval.slice(match.index + match[0].length);
     }
     
     console.log(toEval.trim());
     return new Function(toEval.trim())();
+}
+
+class JSUIShardManager {
+    static #shards = new Object();
+
+    /**
+     * Inits a shard from the node of the shard
+     * @param {Element} node The shard node
+     */
+    static initShard(node) {
+        var name;
+        if ((name = node.getAttribute("name")) === null) {
+            throw new Error("The shard must have a name attribute !");
+        }
+
+        if (JSUIShardManager.shardExists(name)) {
+            throw new Error(`The shard '${name}' already exists !`);
+        }
+
+        Reflect.set(JSUIShardManager.#shards, name, node.cloneNode(true));
+        node.remove();
+    }
+
+    /**
+     * Returns the node
+     * @param {string} name 
+     * @returns {Element} The node 
+     */
+    static getShard(name) {
+        if (!JSUIShardManager.shardExists(name)) {
+            throw new Error(`The shard '${name}' doesn't exist !`);
+        }
+
+        return Reflect.get(JSUIShardManager.#shards, name).cloneNode(true);
+    }
+
+    /**
+     * Returns whether a shard exists
+     * @param {string} name The name of the shard
+     * @returns {boolean} Whether the shard exists
+     */
+    static shardExists(name) {
+        return Reflect.has(JSUIShardManager.#shards, name);
+    }
 }
 
 class JSUIVarManager {
