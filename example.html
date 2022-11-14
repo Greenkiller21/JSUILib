@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="./jsui.js"></script>
+    <script src="./jsui.js" defer></script>
     <script src="./example.js"></script>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -16,16 +16,17 @@
             return 'Not a test value';
         </div>
     </jsui:shard>
+    <jsui:shard name="table">
+        <table>
+            <tr @jsui:for="line : @arrLines">
+                <td @jsui:for="content : @line" @jsui:eval>
+                    @content == 1 ? @content + " test" : @content
+                </td>
+            </tr>
+        </table>
+    </jsui:shard>
     
     <body>
-        <div>
-            <table>
-                <tr @jsui:for="line : @arrLines">
-                    <td @jsui:for="content : @line" @jsui:eval>
-                        @content == 1 ? @content + ' test' : @content
-                    </td>
-                </tr>
-            </table>
-        </div>
+        <div id="tableParent"></div>
     </body>
 </html>

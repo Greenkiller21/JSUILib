@@ -1,20 +1,28 @@
-document.addEventListener('DOMContentLoaded', main, false);
-
-function main() {
-    initShards();
-    //parseHtml(document.body);
-
-    // var variables = document.getElementsByTagName("jsui:var");
-    // for (const variable of variables) {
-    //     console.log(variable);
-    //     var jsuiVar = new JSUIVarParser(variable);
-    // }
-}
-
+/**
+ * Searches for all the shards present in the document and
+ * add them to the JSUIShardManager
+ */
+// eslint-disable-next-line no-unused-vars
 function initShards() {
     var shards = document.getElementsByTagName("jsui:shard");
-    for (const shard of shards) {
-        JSUIShardManager.initShard(shard);
+
+    while (shards.length > 0) {
+        JSUIShardManager.initShard(shards[0]);
+    }
+}
+
+/**
+ * Inserts a shard as a child of the node
+ * @param {Element} node The parent node of the shard
+ * @param {string} name  The name of the shard
+ */
+// eslint-disable-next-line no-unused-vars
+function insertShard(node, name) {
+    var shardNode = JSUIShardManager.getShard(name).cloneNode(true);
+    parseHtml(shardNode);
+
+    for (const child of shardNode.children) {
+        node.append(child);
     }
 }
 
@@ -81,7 +89,6 @@ function evaluateString(toEval) {
         toEval = toEval.slice(0, match.index) + toAdd + toEval.slice(match.index + match[0].length);
     }
     
-    console.log(toEval.trim());
     return new Function(toEval.trim())();
 }
 
@@ -165,6 +172,16 @@ class JSUIVarManager {
             throw new Error(`The variable '${name}' already exists !`);
         }
         Reflect.set(JSUIVarManager.#jsui_vars, name);
+    }
+
+    /**
+     * Creates and set a new variable
+     * @param {string} name The name of the variable
+     * @param {any} value   The value to set
+     */
+    static createSetVar(name, value) {
+        JSUIVarManager.createVar(name);
+        JSUIVarManager.setVar(name, value);
     }
 
     /**
